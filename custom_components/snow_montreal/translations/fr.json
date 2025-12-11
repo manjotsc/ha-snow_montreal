@@ -1,0 +1,199 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Déneigement Montréal",
+        "description": "Choisissez comment vous voulez configurer l'intégration.\n\nPour demander un jeton API, envoyez un courriel à {request_email}",
+        "data": {
+          "setup_mode": "Option de configuration"
+        },
+        "data_description": {
+          "setup_mode": "Vous pouvez configurer votre rue maintenant et ajouter le jeton API plus tard, ou entrer votre jeton maintenant si vous en avez un"
+        }
+      },
+      "api_token": {
+        "title": "Entrer le jeton API",
+        "description": "Entrez votre jeton API des Données ouvertes de Montréal.",
+        "data": {
+          "api_token": "Jeton API",
+          "use_simulation": "Utiliser l'environnement de simulation (pour tests)"
+        },
+        "data_description": {
+          "api_token": "Le jeton API obtenu des Données ouvertes de Montréal",
+          "use_simulation": "Activer pour utiliser l'API de simulation/test"
+        }
+      },
+      "search_type": {
+        "title": "Comment trouver votre rue",
+        "description": "Choisissez comment vous voulez identifier votre rue.",
+        "data": {
+          "search_type": "Méthode de recherche"
+        }
+      },
+      "postal_code": {
+        "title": "Recherche par code postal",
+        "description": "Entrez votre numéro civique et code postal pour trouver votre rue.\n\nExemple de code postal: {example_postal}\n\n⏱️ Note: La recherche peut prendre 15-20 secondes (utilise un service de géocodage gratuit).",
+        "data": {
+          "civic_number": "Numéro civique",
+          "postal_code": "Code postal",
+          "street_search": "Nom de rue (optionnel)"
+        },
+        "data_description": {
+          "civic_number": "Votre numéro de maison/immeuble (ex: 1234)",
+          "postal_code": "Votre code postal (ex: H2X 1Y6)",
+          "street_search": "Partie du nom de rue pour affiner les résultats (ex: Acadie)"
+        }
+      },
+      "full_address": {
+        "title": "Entrez votre adresse",
+        "description": "Entrez votre adresse complète pour trouver le segment de rue correspondant.\n\nExemple: {example_address}\n\n⏱️ Note: La recherche peut prendre 15-20 secondes (utilise un service de géocodage gratuit).",
+        "data": {
+          "full_address": "Adresse complète"
+        },
+        "data_description": {
+          "full_address": "Votre adresse complète incluant le numéro civique"
+        }
+      },
+      "address_search": {
+        "title": "Recherche par adresse",
+        "description": "Entrez votre adresse pour trouver le segment de rue correspondant. {download_note}",
+        "data": {
+          "civic_number": "Numéro civique (optionnel)",
+          "street_search": "Nom de rue"
+        },
+        "data_description": {
+          "civic_number": "Votre numéro de maison/immeuble (ex: 1234)",
+          "street_search": "Le nom de votre rue (ex: Saint-Denis, Sherbrooke)"
+        }
+      },
+      "select_street": {
+        "title": "Sélectionnez votre rue",
+        "description": "{result_count} segments de rue trouvés. Sélectionnez celui qui correspond à votre adresse.",
+        "data": {
+          "selected_street": "Segment de rue"
+        }
+      },
+      "manual": {
+        "title": "Entrer l'identifiant manuellement",
+        "description": "Entrez l'identifiant de rue (coteRueId) pour la rue que vous souhaitez surveiller. Vous pouvez trouver les identifiants dans le [jeu de données Géobase double de Montréal]({geobase_url}).",
+        "data": {
+          "street_id": "Identifiant de rue (coteRueId)",
+          "street_name": "Nom de la rue"
+        },
+        "data_description": {
+          "street_id": "L'identifiant unique du segment de rue de la Géobase de Montréal",
+          "street_name": "Un nom convivial pour identifier cette rue (ex: '123 rue Principale')"
+        }
+      },
+      "reconfigure": {
+        "title": "Renommer la rue",
+        "description": "Modifier le nom d'affichage pour l'identifiant de rue {street_id}.",
+        "data": {
+          "street_name": "Nom de la rue"
+        },
+        "data_description": {
+          "street_name": "Un nom convivial pour identifier cette rue (ex: 'Maison', '123 rue Principale')"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Jeton API invalide. Veuillez vérifier votre jeton et réessayer.",
+      "cannot_connect": "Impossible de se connecter à l'API Planif-Neige. Veuillez vérifier votre connexion Internet.",
+      "unknown": "Une erreur inattendue s'est produite.",
+      "invalid_street_id": "Veuillez entrer un identifiant de rue valide.",
+      "no_results": "Aucune rue trouvée correspondant à votre recherche. Essayez un autre nom de rue.",
+      "no_results_postal": "Aucune rue trouvée pour ce code postal. Essayez 'Entrez l'adresse complète' à la place.",
+      "address_required": "Veuillez entrer votre adresse.",
+      "street_required": "Veuillez entrer un nom de rue pour la recherche.",
+      "invalid_selection": "Veuillez sélectionner une rue valide dans la liste.",
+      "token_required": "Veuillez entrer un jeton API.",
+      "street_name_required": "Veuillez entrer un nom de rue.",
+      "civic_number_required": "Veuillez entrer votre numéro civique.",
+      "postal_code_required": "Veuillez entrer votre code postal.",
+      "invalid_postal_code": "Format de code postal invalide. Utilisez le format: H2X 1Y6"
+    },
+    "abort": {
+      "already_configured": "Cette rue est déjà configurée.",
+      "reconfigure_successful": "Nom de rue mis à jour avec succès."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurer le jeton API",
+        "description": "Configurez le jeton API partagé utilisé par tous les moniteurs de rue. Le jeton API est actuellement {has_token}.\n\nPour demander un jeton, envoyez un courriel à {request_email}",
+        "data": {
+          "api_token": "Jeton API",
+          "use_simulation": "Utiliser l'environnement de simulation (pour tests)"
+        },
+        "data_description": {
+          "api_token": "Laisser vide pour supprimer le jeton API",
+          "use_simulation": "Activer pour utiliser l'API de simulation/test"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Jeton API invalide.",
+      "cannot_connect": "Impossible de se connecter à l'API."
+    }
+  },
+  "services": {
+    "search_street": {
+      "name": "Rechercher une rue",
+      "description": "Rechercher une rue par nom ou adresse pour trouver son identifiant.",
+      "fields": {
+        "street_name": {
+          "name": "Nom de rue",
+          "description": "Le nom de la rue à rechercher."
+        },
+        "civic_number": {
+          "name": "Numéro civique",
+          "description": "Numéro civique optionnel pour affiner la recherche."
+        }
+      }
+    },
+    "refresh_geobase": {
+      "name": "Actualiser les données Géobase",
+      "description": "Forcer l'actualisation des données de rue depuis la Géobase de Montréal."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "snow_removal_status": {
+        "name": "État du déneigement",
+        "state": {
+          "unknown": "Inconnu",
+          "scheduled": "Planifié",
+          "in_progress": "En cours",
+          "completed": "Terminé",
+          "cancelled": "Annulé",
+          "pending": "En attente",
+          "replanned": "Replanifié",
+          "awaiting_api_key": "En attente du jeton API"
+        }
+      },
+      "planned_start": {
+        "name": "Début prévu du déneigement"
+      },
+      "planned_end": {
+        "name": "Fin prévue du déneigement"
+      }
+    },
+    "binary_sensor": {
+      "snow_removal_active": {
+        "name": "Déneigement actif",
+        "state": {
+          "on": "Actif",
+          "off": "Inactif"
+        }
+      },
+      "parking_restricted": {
+        "name": "Stationnement interdit",
+        "state": {
+          "on": "Interdit",
+          "off": "Permis"
+        }
+      }
+    }
+  }
+}

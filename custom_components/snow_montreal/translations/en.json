@@ -1,0 +1,199 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Montreal Snow Removal",
+        "description": "Choose how you want to set up the integration.\n\nTo request an API token, email {request_email}",
+        "data": {
+          "setup_mode": "Setup Option"
+        },
+        "data_description": {
+          "setup_mode": "You can set up your street now and add the API token later, or enter your token now if you have one"
+        }
+      },
+      "api_token": {
+        "title": "Enter API Token",
+        "description": "Enter your API token from Montreal Open Data.",
+        "data": {
+          "api_token": "API Token",
+          "use_simulation": "Use simulation endpoint (for testing)"
+        },
+        "data_description": {
+          "api_token": "The API token obtained from Montreal Open Data",
+          "use_simulation": "Enable this to use the simulation/test API endpoint"
+        }
+      },
+      "search_type": {
+        "title": "How to Find Your Street",
+        "description": "Choose how you want to identify your street.",
+        "data": {
+          "search_type": "Search Method"
+        }
+      },
+      "postal_code": {
+        "title": "Search by Postal Code",
+        "description": "Enter your civic number and postal code to find your street.\n\nExample postal code: {example_postal}\n\n⏱️ Note: Search may take 15-20 seconds (uses free geocoding service).",
+        "data": {
+          "civic_number": "Civic Number",
+          "postal_code": "Postal Code",
+          "street_search": "Street Name (optional)"
+        },
+        "data_description": {
+          "civic_number": "Your house/building number (e.g., 1234)",
+          "postal_code": "Your postal code (e.g., H2X 1Y6)",
+          "street_search": "Part of your street name to narrow results (e.g., Acadie)"
+        }
+      },
+      "full_address": {
+        "title": "Enter Your Address",
+        "description": "Enter your full address to find the matching street segment.\n\nExample: {example_address}\n\n⏱️ Note: Search may take 15-20 seconds (uses free geocoding service).",
+        "data": {
+          "full_address": "Full Address"
+        },
+        "data_description": {
+          "full_address": "Your complete street address including civic number"
+        }
+      },
+      "address_search": {
+        "title": "Search by Address",
+        "description": "Enter your address to find the matching street segment. {download_note}",
+        "data": {
+          "civic_number": "Civic Number (optional)",
+          "street_search": "Street Name"
+        },
+        "data_description": {
+          "civic_number": "Your house/building number (e.g., 1234)",
+          "street_search": "The name of your street (e.g., Saint-Denis, Sherbrooke)"
+        }
+      },
+      "select_street": {
+        "title": "Select Your Street",
+        "description": "Found {result_count} matching street segments. Select the one that matches your address.",
+        "data": {
+          "selected_street": "Street Segment"
+        }
+      },
+      "manual": {
+        "title": "Enter Street ID Manually",
+        "description": "Enter the street ID (coteRueId) for the street you want to monitor. You can find street IDs in the [Montreal Double Geobase dataset]({geobase_url}).",
+        "data": {
+          "street_id": "Street ID (coteRueId)",
+          "street_name": "Street Name"
+        },
+        "data_description": {
+          "street_id": "The unique identifier for the street segment from the Montreal Geobase",
+          "street_name": "A friendly name to identify this street (e.g., '123 Main Street')"
+        }
+      },
+      "reconfigure": {
+        "title": "Rename Street",
+        "description": "Change the display name for street ID {street_id}.",
+        "data": {
+          "street_name": "Street Name"
+        },
+        "data_description": {
+          "street_name": "A friendly name to identify this street (e.g., 'Home', '123 Main Street')"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API token. Please check your token and try again.",
+      "cannot_connect": "Cannot connect to the Planif-Neige API. Please check your internet connection.",
+      "unknown": "An unexpected error occurred.",
+      "invalid_street_id": "Please enter a valid street ID.",
+      "no_results": "No streets found matching your search. Try a different street name.",
+      "no_results_postal": "No streets found for this postal code. Try using 'Enter full address' instead.",
+      "address_required": "Please enter your address.",
+      "street_required": "Please enter a street name to search.",
+      "invalid_selection": "Please select a valid street from the list.",
+      "token_required": "Please enter an API token.",
+      "street_name_required": "Please enter a street name.",
+      "civic_number_required": "Please enter your civic number.",
+      "postal_code_required": "Please enter your postal code.",
+      "invalid_postal_code": "Invalid postal code format. Use format: H2X 1Y6"
+    },
+    "abort": {
+      "already_configured": "This street is already configured.",
+      "reconfigure_successful": "Street name updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure API Token",
+        "description": "Configure the shared API token used by all street monitors. API token is currently {has_token}.\n\nTo request a token, email {request_email}",
+        "data": {
+          "api_token": "API Token",
+          "use_simulation": "Use simulation endpoint (for testing)"
+        },
+        "data_description": {
+          "api_token": "Leave empty to remove the API token",
+          "use_simulation": "Enable this to use the simulation/test API endpoint"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API token.",
+      "cannot_connect": "Cannot connect to the API."
+    }
+  },
+  "services": {
+    "search_street": {
+      "name": "Search Street",
+      "description": "Search for a street by name or address to find its street ID.",
+      "fields": {
+        "street_name": {
+          "name": "Street Name",
+          "description": "The name of the street to search for."
+        },
+        "civic_number": {
+          "name": "Civic Number",
+          "description": "Optional civic/house number to narrow down the search."
+        }
+      }
+    },
+    "refresh_geobase": {
+      "name": "Refresh Geobase Data",
+      "description": "Force refresh the cached street data from Montreal's Geobase."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "snow_removal_status": {
+        "name": "Snow Removal Status",
+        "state": {
+          "unknown": "Unknown",
+          "scheduled": "Scheduled",
+          "in_progress": "In Progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "pending": "Pending",
+          "replanned": "Replanned",
+          "awaiting_api_key": "Awaiting API Key"
+        }
+      },
+      "planned_start": {
+        "name": "Snow Removal Planned Start"
+      },
+      "planned_end": {
+        "name": "Snow Removal Planned End"
+      }
+    },
+    "binary_sensor": {
+      "snow_removal_active": {
+        "name": "Snow Removal Active",
+        "state": {
+          "on": "Active",
+          "off": "Inactive"
+        }
+      },
+      "parking_restricted": {
+        "name": "Parking Restricted",
+        "state": {
+          "on": "Restricted",
+          "off": "Allowed"
+        }
+      }
+    }
+  }
+}

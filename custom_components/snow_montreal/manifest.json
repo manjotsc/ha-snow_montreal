@@ -1,0 +1,12 @@
+{
+  "domain": "snow_montreal",
+  "name": "Montreal Snow Removal",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/your-repo/ha-snow_montreal",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/your-repo/ha-snow_montreal/issues",
+  "requirements": ["zeep>=4.2.1"],
+  "version": "1.0.0"
+}

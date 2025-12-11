@@ -1,0 +1,25 @@
+search_street:
+  name: Search Street
+  description: Search for a street by name or address to find its street ID (coteRueId).
+  fields:
+    street_name:
+      name: Street Name
+      description: The name of the street to search for.
+      required: true
+      example: "Saint-Denis"
+      selector:
+        text:
+    civic_number:
+      name: Civic Number
+      description: Optional civic/house number to narrow down the search.
+      required: false
+      example: 1234
+      selector:
+        number:
+          min: 1
+          max: 99999
+          mode: box
+
+refresh_geobase:
+  name: Refresh Geobase Data
+  description: Force refresh the cached street data from Montreal's Geobase.
