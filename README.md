@@ -4,13 +4,17 @@ Track snow removal operations on your street using Montreal's Planif-Neige data.
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
+> **Powered by [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)** - Free, open-source API by [@ludodefgh](https://github.com/ludodefgh)
+
 ## Features
 
-- Real-time snow removal status updates (every 10 minutes)
+- Snow removal status updates (refreshes every 10 minutes)
 - Parking restriction alerts
 - Planned start/end times
 - English & French support
 - Easy address search or manual street ID entry
+
+> **Note on data accuracy:** Update speed depends on contractors reporting to their dispatchers, who then update the city's system. There may be delays between actual operations and status changes.
 
 ## Installation
 
@@ -98,9 +102,11 @@ automation:
 
 ## Credits
 
-- [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api) by @ludodefgh
-- [Montreal Open Data](https://donnees.montreal.ca/)
+This integration would not be possible without:
+
+- **[Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)** by [@ludodefgh](https://github.com/ludodefgh) - The free API that makes this integration work without requiring an API key
+- **[Montreal Open Data](https://donnees.montreal.ca/)** - Street data (Geobase Double)
 
 ---
 
-**Note:** Always follow posted traffic signs. They take precedence over this data.
+**Disclaimer:** Always follow posted traffic signs. They take precedence over this data.
