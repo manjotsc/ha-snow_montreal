@@ -29,13 +29,13 @@
       },
       "manual": {
         "title": "Entrée manuelle",
-        "description": "Entrez l'identifiant de rue (COTE_RUE_ID) du [jeu de données Géobase Double de Montréal]({geobase_url}).",
+        "description": "Trouvez votre identifiant de rue:\n\n**Option 1:** Outils de développement → Services → `snow_montreal.search_street`\n\n**Option 2:** Télécharger depuis [Géobase Montréal]({geobase_url}) et chercher COTE_RUE_ID",
         "data": {
           "street_id": "Identifiant de rue",
           "street_name": "Nom d'affichage"
         },
         "data_description": {
-          "street_id": "La valeur COTE_RUE_ID du jeu de données",
+          "street_id": "La valeur COTE_RUE_ID",
           "street_name": "Un nom pour identifier cette rue (ex: 'Maison')"
         }
       },

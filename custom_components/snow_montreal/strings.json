@@ -29,13 +29,13 @@
       },
       "manual": {
         "title": "Manual Entry",
-        "description": "Enter the street ID (COTE_RUE_ID) from the [Montreal Geobase Double dataset]({geobase_url}).",
+        "description": "Find your street ID using:\n\n**Option 1:** Developer Tools → Services → `snow_montreal.search_street`\n\n**Option 2:** Download from [Montreal Geobase]({geobase_url}) and search for COTE_RUE_ID",
         "data": {
           "street_id": "Street ID",
           "street_name": "Display Name"
         },
         "data_description": {
-          "street_id": "The COTE_RUE_ID value from the dataset",
+          "street_id": "The COTE_RUE_ID value",
           "street_name": "A friendly name for this street (e.g., 'Home')"
         }
       },
