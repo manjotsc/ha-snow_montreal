@@ -17,6 +17,9 @@ from .street_lookup import get_street_lookup
 
 _LOGGER = logging.getLogger(__name__)
 
+# Config entry only, no YAML configuration
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 SERVICE_SEARCH_STREET = "search_street"
