@@ -377,19 +377,26 @@ class StreetLookup:
                 if street_filter not in segment_normalized and segment_normalized not in street_filter:
                     continue
 
-            # Filter by civic number if provided
+            # Calculate distance (simple Euclidean for small distances)
+            distance = self._calculate_distance(lat, lon, segment.lat, segment.lon)
+
+            # Adjust distance based on civic number match if provided
+            # Don't filter out opposite side - include both sides
             if civic_number is not None:
                 if segment.address_start and segment.address_end:
                     addr_min = min(segment.address_start, segment.address_end)
                     addr_max = max(segment.address_start, segment.address_end)
-                    if not (addr_min <= civic_number <= addr_max):
-                        continue
-                elif segment.address_start:
-                    if civic_number < segment.address_start:
-                        continue
+                    if addr_min <= civic_number <= addr_max:
+                        # Exact match - prioritize by reducing distance
+                        distance *= 0.5
+                    else:
+                        # Check parity - opposite side of street should still show
+                        segment_parity = addr_min % 2
+                        civic_parity = civic_number % 2
+                        if segment_parity != civic_parity:
+                            # Likely opposite side, slightly deprioritize
+                            distance *= 1.2
 
-            # Calculate distance (simple Euclidean for small distances)
-            distance = self._calculate_distance(lat, lon, segment.lat, segment.lon)
             results.append((distance, segment))
 
         # Sort by distance
@@ -522,7 +529,7 @@ class StreetLookup:
         if street_hint:
             hint_normalized = self._normalize_street_name(street_hint.lower())
 
-        results = []
+        results = []  # (priority, segment) tuples
         for segment in self._streets:
             # Filter by street name hint if provided
             if hint_normalized:
@@ -530,15 +537,24 @@ class StreetLookup:
                 if hint_normalized not in segment_normalized:
                     continue
 
-            # Check civic number range
+            # Check civic number range - include both sides of street
             if segment.address_start and segment.address_end:
                 addr_min = min(segment.address_start, segment.address_end)
                 addr_max = max(segment.address_start, segment.address_end)
                 if addr_min <= civic_number <= addr_max:
-                    results.append(segment)
+                    # Exact match - highest priority
+                    results.append((0, segment))
+                else:
+                    # Check parity - opposite side should still show
+                    segment_parity = addr_min % 2
+                    civic_parity = civic_number % 2
+                    if segment_parity != civic_parity:
+                        # Likely opposite side of the street
+                        results.append((1, segment))
 
-        # Sort by street name for easier browsing
-        results.sort(key=lambda s: (s.street_name, s.address_start or 0))
+        # Sort by priority, then street name for easier browsing
+        results.sort(key=lambda x: (x[0], x[1].street_name, x[1].address_start or 0))
+        results = [seg for _, seg in results]
 
         _LOGGER.debug(
             "Civic number search found %d segments for %d (hint: %s)",
@@ -709,7 +725,8 @@ class StreetLookup:
             else:
                 continue
 
-            # Filter by civic number if provided
+            # Adjust score based on civic number if provided
+            # Don't filter out opposite side - just prioritize the matching side
             if civic_number is not None:
                 if segment.address_start and segment.address_end:
                     addr_min = min(segment.address_start, segment.address_end)
@@ -717,10 +734,15 @@ class StreetLookup:
                     if addr_min <= civic_number <= addr_max:
                         score += 20  # Bonus for matching address range
                     else:
-                        continue  # Skip if not in range
-                elif segment.address_start:
-                    if civic_number < segment.address_start:
-                        continue
+                        # Check if civic number parity matches segment parity
+                        # (even/odd numbers are typically on opposite sides)
+                        segment_parity = addr_min % 2
+                        civic_parity = civic_number % 2
+                        if segment_parity != civic_parity:
+                            # This is likely the opposite side of the street
+                            # Include it but with lower priority
+                            score += 5
+                        # else: different street segment entirely, no bonus
 
             results.append((score, segment))
 
