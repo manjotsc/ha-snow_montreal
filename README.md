@@ -44,8 +44,17 @@ Copy `custom_components/snow_montreal` to your `config/custom_components` folder
 Enter your street name and civic number — the integration will find your street.
 
 ### Option 2: Manual Entry
-Find your street ID from the [Montreal Geobase](https://donnees.montreal.ca/dataset/geobase-double):
+Find your street ID using one of these methods:
 
+**Method A:** Use the `snow_montreal.search_street` service in Developer Tools → Services:
+```yaml
+service: snow_montreal.search_street
+data:
+  street_name: "Acadie"
+  civic_number: 1234
+```
+
+**Method B:** Download [Montreal Geobase](https://donnees.montreal.ca/dataset/geobase-double) and search for your street:
 ```json
 {
   "COTE_RUE_ID": 10200162,    ← This is your street ID
