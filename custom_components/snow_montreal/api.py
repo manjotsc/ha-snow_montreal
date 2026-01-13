@@ -1,4 +1,4 @@
-"""API client for Montreal Planif-Neige snow removal service."""
+"""API client for Montreal Planif-Neige snow removal service (Public API)."""
 from __future__ import annotations
 
 import asyncio
@@ -7,21 +7,23 @@ from datetime import datetime
 import logging
 from typing import Any
 
-from zeep import AsyncClient
-from zeep.exceptions import Fault, TransportError
-from zeep.transports import AsyncTransport
+import aiohttp
 
-from .const import WSDL_URL, WSDL_URL_SIM
+from .const import (
+    PUBLIC_API_DATA_URL,
+    PUBLIC_API_METADATA_URL,
+    SNOW_STATE_MAP,
+    STATE_LABELS,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+# Request timeout in seconds
+REQUEST_TIMEOUT = 30
 
 
 class PlanifNeigeError(Exception):
     """Base exception for Planif-Neige API errors."""
-
-
-class PlanifNeigeAuthError(PlanifNeigeError):
-    """Authentication error."""
 
 
 class PlanifNeigeConnectionError(PlanifNeigeError):
@@ -46,101 +48,85 @@ class StreetSnowStatus:
     @property
     def is_active(self) -> bool:
         """Return True if snow removal is currently active or planned."""
-        return self.status_code in (1, 2, 5, 6)
+        # Active states: scheduled (2), rescheduled (3), or in_progress (5)
+        return self.status_code in (2, 3, 5)
+
+    @property
+    def is_parking_restricted(self) -> bool:
+        """Return True if parking is restricted (snow removal scheduled or in progress)."""
+        # Parking restricted: scheduled (2), rescheduled (3), or in_progress (5)
+        return self.status_code in (2, 3, 5)
 
     @property
     def state(self) -> str:
         """Return a simple state string."""
-        state_map = {
-            0: "unknown",
-            1: "scheduled",
-            2: "in_progress",
-            3: "completed",
-            4: "cancelled",
-            5: "pending",
-            6: "replanned",
-        }
-        return state_map.get(self.status_code, "unknown")
+        return SNOW_STATE_MAP.get(self.status_code, "unknown")
+
+
+@dataclass
+class ApiMetadata:
+    """Metadata about the API data."""
+
+    last_update: datetime | None
+    from_date: datetime | None
+    record_count: int
+    status: str
 
 
 class PlanifNeigeClient:
-    """Client for the Montreal Planif-Neige API."""
+    """Client for the Montreal Planif-Neige Public API."""
 
-    def __init__(
-        self,
-        api_token: str,
-        use_simulation: bool = False,
-    ) -> None:
+    def __init__(self, session: aiohttp.ClientSession | None = None) -> None:
         """Initialize the API client.
 
         Args:
-            api_token: API token obtained from Montreal Open Data.
-            use_simulation: Use simulation/test endpoint instead of production.
+            session: Optional aiohttp session. If not provided, one will be created.
         """
-        self._api_token = api_token
-        self._use_simulation = use_simulation
-        self._client: AsyncClient | None = None
-        self._wsdl_url = WSDL_URL_SIM if use_simulation else WSDL_URL
+        self._session = session
+        self._owns_session = session is None
 
-    async def _get_client(self) -> AsyncClient:
-        """Get or create the SOAP client."""
-        if self._client is None:
-            transport = AsyncTransport()
-            self._client = AsyncClient(self._wsdl_url, transport=transport)
-        return self._client
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create the aiohttp session."""
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+            self._owns_session = True
+        return self._session
 
-    async def async_validate_token(self) -> bool:
-        """Validate the API token by making a test request.
+    async def async_get_metadata(self) -> ApiMetadata:
+        """Get metadata about the API data.
 
         Returns:
-            True if the token is valid.
+            ApiMetadata with last update time and record count.
 
         Raises:
-            PlanifNeigeAuthError: If the token is invalid.
             PlanifNeigeConnectionError: If connection fails.
         """
         try:
-            client = await self._get_client()
-            # Make a request for today's date to validate the token
-            today = datetime.now().strftime("%Y-%m-%d")
+            session = await self._get_session()
+            async with session.get(
+                PUBLIC_API_METADATA_URL,
+                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+            ) as response:
+                response.raise_for_status()
+                # GitHub raw returns text/plain, so disable content-type check
+                data = await response.json(content_type=None)
 
-            result = await client.service.GetPlanificationInfosForDate(
-                fromDate=today,
-                tokenString=self._api_token,
-            )
+                return ApiMetadata(
+                    last_update=self._parse_datetime(data.get("last_update")),
+                    from_date=self._parse_datetime(data.get("from_date")),
+                    record_count=data.get("record_count", 0),
+                    status=data.get("status", "unknown"),
+                )
 
-            # Check response status
-            if hasattr(result, "responseStatus"):
-                if result.responseStatus == 0:
-                    return True
-                if result.responseStatus in (-1, -2):
-                    raise PlanifNeigeAuthError(
-                        f"Invalid API token: {getattr(result, 'responseDesc', 'Unknown error')}"
-                    )
-            return True
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Connection error getting metadata: %s", err)
+            raise PlanifNeigeConnectionError(f"Connection error: {err}") from err
+        except asyncio.TimeoutError as err:
+            _LOGGER.error("Timeout getting metadata")
+            raise PlanifNeigeConnectionError("Request timed out") from err
 
-        except Fault as err:
-            _LOGGER.error("SOAP Fault during token validation: %s", err)
-            raise PlanifNeigeAuthError(f"API authentication failed: {err}") from err
-        except TransportError as err:
-            _LOGGER.error("Transport error during token validation: %s", err)
-            raise PlanifNeigeConnectionError(
-                f"Failed to connect to Planif-Neige API: {err}"
-            ) from err
-        except Exception as err:
-            _LOGGER.error("Unexpected error during token validation: %s", err)
-            raise PlanifNeigeConnectionError(
-                f"Connection error: {err}"
-            ) from err
-
-    async def async_get_planifications(
-        self,
-        from_date: datetime | None = None,
-    ) -> dict[int, StreetSnowStatus]:
+    async def async_get_planifications(self) -> dict[int, StreetSnowStatus]:
         """Get snow removal planifications for all streets.
-
-        Args:
-            from_date: Start date for planification query. Defaults to today.
 
         Returns:
             Dictionary mapping street_id to StreetSnowStatus.
@@ -148,44 +134,42 @@ class PlanifNeigeClient:
         Raises:
             PlanifNeigeError: If the API request fails.
         """
-        if from_date is None:
-            from_date = datetime.now()
-
-        date_str = from_date.strftime("%Y-%m-%d")
-
         try:
-            client = await self._get_client()
-            result = await client.service.GetPlanificationsForDate(
-                fromDate=date_str,
-                tokenString=self._api_token,
-            )
+            session = await self._get_session()
+            async with session.get(
+                PUBLIC_API_DATA_URL,
+                timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
+            ) as response:
+                response.raise_for_status()
+                # GitHub raw returns text/plain, so disable content-type check
+                data = await response.json(content_type=None)
 
-            return self._parse_planifications(result)
+                # API returns {"planifications": [...]} wrapper
+                if isinstance(data, dict) and "planifications" in data:
+                    data = data["planifications"]
 
-        except Fault as err:
-            _LOGGER.error("SOAP Fault getting planifications: %s", err)
-            raise PlanifNeigeError(f"API error: {err}") from err
-        except TransportError as err:
-            _LOGGER.error("Transport error getting planifications: %s", err)
-            raise PlanifNeigeConnectionError(
-                f"Connection error: {err}"
-            ) from err
+                return self._parse_planifications(data)
+
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Connection error getting planifications: %s", err)
+            raise PlanifNeigeConnectionError(f"Connection error: {err}") from err
+        except asyncio.TimeoutError as err:
+            _LOGGER.error("Timeout getting planifications")
+            raise PlanifNeigeConnectionError("Request timed out") from err
 
     async def async_get_street_status(
         self,
         street_ids: list[int],
-        from_date: datetime | None = None,
     ) -> dict[int, StreetSnowStatus]:
         """Get snow removal status for specific streets.
 
         Args:
             street_ids: List of street IDs (coteRueId) to query.
-            from_date: Start date for query. Defaults to today.
 
         Returns:
             Dictionary mapping street_id to StreetSnowStatus.
         """
-        all_planifications = await self.async_get_planifications(from_date)
+        all_planifications = await self.async_get_planifications()
 
         return {
             street_id: status
@@ -193,129 +177,56 @@ class PlanifNeigeClient:
             if street_id in street_ids
         }
 
-    async def async_get_planification_infos(
-        self,
-        from_date: datetime | None = None,
-    ) -> dict[int, StreetSnowStatus]:
-        """Get planification info (simplified status) for all streets.
-
-        Args:
-            from_date: Start date for query. Defaults to today.
-
-        Returns:
-            Dictionary mapping street_id to StreetSnowStatus.
-        """
-        if from_date is None:
-            from_date = datetime.now()
-
-        date_str = from_date.strftime("%Y-%m-%d")
-
-        try:
-            client = await self._get_client()
-            result = await client.service.GetPlanificationInfosForDate(
-                fromDate=date_str,
-                tokenString=self._api_token,
-            )
-
-            return self._parse_planification_infos(result)
-
-        except Fault as err:
-            _LOGGER.error("SOAP Fault getting planification infos: %s", err)
-            raise PlanifNeigeError(f"API error: {err}") from err
-        except TransportError as err:
-            _LOGGER.error("Transport error getting planification infos: %s", err)
-            raise PlanifNeigeConnectionError(
-                f"Connection error: {err}"
-            ) from err
-
-    def _parse_planifications(
-        self, response: Any
-    ) -> dict[int, StreetSnowStatus]:
-        """Parse the GetPlanificationsForDate response."""
+    def _parse_planifications(self, data: list[dict[str, Any]]) -> dict[int, StreetSnowStatus]:
+        """Parse the JSON response into StreetSnowStatus objects."""
         result: dict[int, StreetSnowStatus] = {}
 
-        if not hasattr(response, "planifications"):
-            _LOGGER.debug("No planifications in response")
+        if not isinstance(data, list):
+            _LOGGER.debug("Expected list, got %s", type(data))
             return result
 
-        planifications = response.planifications
-        if not hasattr(planifications, "planification"):
-            _LOGGER.debug("No planification entries")
-            return result
-
-        for p in planifications.planification:
+        for entry in data:
             try:
-                street_id = int(getattr(p, "coteRueId", 0))
+                # Public API field: cote_rue_id
+                street_id = entry.get("cote_rue_id") or entry.get("coteRueId") or 0
+                street_id = int(street_id)
                 if street_id == 0:
                     continue
 
+                # Public API field: etat_deneig
+                status_code = int(entry.get("etat_deneig") or entry.get("etatDeneig") or 0)
+
                 status = StreetSnowStatus(
                     street_id=street_id,
-                    municipality_id=getattr(p, "munid", None),
-                    status_code=int(getattr(p, "etatDeneig", 0)),
-                    status_label_fr="",
-                    status_label_en="",
+                    # Public API field: mun_id
+                    municipality_id=entry.get("mun_id") or entry.get("munid"),
+                    status_code=status_code,
+                    status_label_fr=STATE_LABELS["fr"].get(status_code, "Inconnu"),
+                    status_label_en=STATE_LABELS["en"].get(status_code, "Unknown"),
+                    # Public API field: date_deb_planif (not date_debut_planif)
                     planned_start=self._parse_datetime(
-                        getattr(p, "dateDebutPlanif", None)
+                        entry.get("date_deb_planif") or entry.get("dateDebutPlanif")
                     ),
+                    # Public API field: date_fin_planif
                     planned_end=self._parse_datetime(
-                        getattr(p, "dateFinPlanif", None)
+                        entry.get("date_fin_planif") or entry.get("dateFinPlanif")
                     ),
+                    # Public API field: date_deb_replanif (not date_debut_replanif)
                     replanned_start=self._parse_datetime(
-                        getattr(p, "dateDebutReplanif", None)
+                        entry.get("date_deb_replanif") or entry.get("dateDebutReplanif")
                     ),
+                    # Public API field: date_fin_replanif
                     replanned_end=self._parse_datetime(
-                        getattr(p, "dateFinReplanif", None)
+                        entry.get("date_fin_replanif") or entry.get("dateFinReplanif")
                     ),
+                    # Public API field: date_maj
                     last_updated=self._parse_datetime(
-                        getattr(p, "dateMaj", None)
+                        entry.get("date_maj") or entry.get("dateMaj")
                     ),
                 )
                 result[street_id] = status
             except (ValueError, TypeError) as err:
-                _LOGGER.debug("Error parsing planification: %s", err)
-                continue
-
-        return result
-
-    def _parse_planification_infos(
-        self, response: Any
-    ) -> dict[int, StreetSnowStatus]:
-        """Parse the GetPlanificationInfosForDate response."""
-        result: dict[int, StreetSnowStatus] = {}
-
-        if not hasattr(response, "planificationInfos"):
-            _LOGGER.debug("No planificationInfos in response")
-            return result
-
-        infos = response.planificationInfos
-        if not hasattr(infos, "planificationInfo"):
-            _LOGGER.debug("No planificationInfo entries")
-            return result
-
-        for info in infos.planificationInfo:
-            try:
-                street_id = int(getattr(info, "coteRueId", 0))
-                if street_id == 0:
-                    continue
-
-                status = StreetSnowStatus(
-                    street_id=street_id,
-                    municipality_id=None,
-                    status_code=int(getattr(info, "codeStatus", 0)),
-                    status_label_fr=getattr(info, "etatStatutLibelleFrancais", ""),
-                    status_label_en=getattr(info, "etatStatutLibelleAnglais", ""),
-                    planned_start=None,
-                    planned_end=None,
-                    replanned_start=None,
-                    replanned_end=None,
-                    last_updated=self._parse_datetime(
-                        getattr(info, "dateMaj", None)
-                    ),
-                )
-                result[street_id] = status
-            except (ValueError, TypeError) as err:
-                _LOGGER.debug("Error parsing planification info: %s", err)
+                _LOGGER.debug("Error parsing entry: %s", err)
                 continue
 
         return result
@@ -330,8 +241,13 @@ class PlanifNeigeClient:
             return value
 
         if isinstance(value, str):
-            # Try parsing ISO format
-            for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            # Try parsing various ISO formats
+            for fmt in (
+                "%Y-%m-%dT%H:%M:%S.%f",
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d",
+            ):
                 try:
                     return datetime.strptime(value, fmt)
                 except ValueError:
@@ -341,8 +257,6 @@ class PlanifNeigeClient:
 
     async def close(self) -> None:
         """Close the client connection."""
-        if self._client is not None:
-            transport = self._client.transport
-            if hasattr(transport, "session") and transport.session:
-                await transport.session.close()
-            self._client = None
+        if self._owns_session and self._session is not None:
+            await self._session.close()
+            self._session = None

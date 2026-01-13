@@ -141,7 +141,8 @@ class StreetLookup:
         async with aiohttp.ClientSession() as session:
             async with session.get(GEOBASE_URL, timeout=aiohttp.ClientTimeout(total=120)) as response:
                 response.raise_for_status()
-                data = await response.json()
+                # Disable content-type check in case server returns non-JSON mimetype
+                data = await response.json(content_type=None)
 
         # Save to cache (use thread to avoid blocking)
         if cache_file:

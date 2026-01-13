@@ -5,57 +5,57 @@ from typing import Final
 
 DOMAIN: Final = "snow_montreal"
 
-# API Configuration
-WSDL_URL: Final = "https://servicesenligne2.ville.montreal.qc.ca/api/infoneige/InfoneigeWebService?WSDL"
-WSDL_URL_SIM: Final = "https://servicesenligne2.ville.montreal.qc.ca/api/infoneige/sim/InfoneigeWebService?wsdl"
+# Public API Configuration (no token required)
+PUBLIC_API_DATA_URL: Final = "https://raw.githubusercontent.com/ludodefgh/planif-neige-public-api/main/data/planif-neige.json"
+PUBLIC_API_METADATA_URL: Final = "https://raw.githubusercontent.com/ludodefgh/planif-neige-public-api/main/data/planif-neige-metadata.json"
+PUBLIC_API_GEOBASE_URL: Final = "https://raw.githubusercontent.com/ludodefgh/planif-neige-public-api/main/data/geobase-map.json"
 
 # Config keys
-CONF_API_TOKEN: Final = "api_token"
-CONF_STREETS: Final = "streets"
 CONF_STREET_ID: Final = "street_id"
 CONF_STREET_NAME: Final = "street_name"
-CONF_USE_SIMULATION: Final = "use_simulation"
 
-# Update interval in seconds (5 minutes)
-UPDATE_INTERVAL: Final = 300
+# Update interval in seconds (10 minutes - matches public API update frequency)
+UPDATE_INTERVAL: Final = 600
 
-# Snow removal states
-STATE_UNKNOWN: Final = 0
-STATE_SCHEDULED: Final = 1
-STATE_IN_PROGRESS: Final = 2
-STATE_COMPLETED: Final = 3
-STATE_CANCELLED: Final = 4
+# Snow removal states (Public API status codes)
+STATE_SNOWED: Final = 0  # Not yet cleared
+STATE_CLEARED: Final = 1  # Loading complete
+STATE_SCHEDULED: Final = 2  # Clearance planned
+STATE_RESCHEDULED: Final = 3  # Rescheduled to new date
+STATE_DEFERRED: Final = 4  # Deferred, date TBD
+STATE_IN_PROGRESS: Final = 5  # Currently clearing
+STATE_CLEAR: Final = 10  # Between operations
 
-# State mappings (etatDeneig values from API)
+# State mappings (Public API status codes)
 SNOW_STATE_MAP: Final = {
-    0: "unknown",
-    1: "scheduled",
-    2: "in_progress",
-    3: "completed",
-    4: "cancelled",
-    5: "pending",
-    6: "replanned",
+    0: "snowed",
+    1: "cleared",
+    2: "scheduled",
+    3: "rescheduled",
+    4: "deferred",
+    5: "in_progress",
+    10: "clear",
 }
 
-# French/English status labels from API
+# French/English status labels (Public API status codes)
 STATE_LABELS: Final = {
     "en": {
-        0: "Unknown",
-        1: "Scheduled",
-        2: "In Progress",
-        3: "Completed",
-        4: "Cancelled",
-        5: "Pending",
-        6: "Replanned",
+        0: "Snowed",
+        1: "Cleared",
+        2: "Scheduled",
+        3: "Rescheduled",
+        4: "Deferred",
+        5: "In Progress",
+        10: "Clear",
     },
     "fr": {
-        0: "Inconnu",
-        1: "Planifié",
-        2: "En cours",
-        3: "Terminé",
-        4: "Annulé",
-        5: "En attente",
-        6: "Replanifié",
+        0: "Enneigé",
+        1: "Déneigé",
+        2: "Planifié",
+        3: "Replanifié",
+        4: "Sera replanifié",
+        5: "En cours",
+        10: "Dégagé",
     },
 }
 

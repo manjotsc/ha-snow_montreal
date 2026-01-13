@@ -1,26 +1,17 @@
 # Montreal Snow Removal Integration for Home Assistant
 
-A Home Assistant custom integration for tracking Montreal snow removal operations using the City of Montreal's Planif-Neige API.
+A Home Assistant custom integration for tracking Montreal snow removal operations using the free [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api).
 
 ## Features
 
+- **No API key required** - Uses the free public API
 - Track snow removal status for specific streets
-- **Address search** - Find your street by typing your address (no need to look up IDs manually!)
+- **Address search** - Find your street by typing your address
 - Binary sensors for parking restrictions
 - Planned start/end times for snow removal operations
 - Support for both English and French
 - UI-based configuration
 - Services for street lookup in automations
-
-## Prerequisites
-
-### API Token
-
-You need an API token from Montreal Open Data to use this integration. To obtain one:
-
-1. Send an email to donneesouvertes@montreal.ca
-2. Request access to the Planif-Neige API
-3. You will receive an API token to use with this integration
 
 ## Installation
 
@@ -44,11 +35,60 @@ You need an API token from Montreal Open Data to use this integration. To obtain
 1. Go to **Settings** > **Devices & Services**
 2. Click **Add Integration**
 3. Search for "Montreal Snow Removal"
-4. Enter your API token
-5. Choose how to find your street:
-   - **Search by address**: Enter your civic number and street name to find matching streets
-   - **Enter manually**: Enter the street ID directly if you know it
-6. Select your street from the search results
+4. Choose your setup method:
+   - **Search by address** (recommended)
+   - **Enter street ID manually**
+
+### Option 1: Search by Address
+
+1. Select "Search by address"
+2. Enter your civic number (optional but recommended)
+3. Enter your street name (e.g., "Saint-Denis", "Sherbrooke")
+4. Select your street from the results
+
+### Option 2: Manual Entry (Finding Your Street ID)
+
+If the search doesn't find your street, you can enter the street ID manually:
+
+#### Step 1: Download the Geobase Data
+
+1. Go to [Montreal Geobase Double Dataset](https://donnees.montreal.ca/dataset/geobase-double)
+2. Download the **GeoJSON** file (`gbdouble.json`)
+
+#### Step 2: Find Your Street ID
+
+Open the file and search for your street. Look for the `COTE_RUE_ID` value:
+
+```json
+{
+  "properties": {
+    "COTE_RUE_ID": 10200162,
+    "NOM_VOIE": "Acadie",
+    "NOM_VILLE": "MTL",
+    "DEBUT_ADRESSE": 0,
+    "FIN_ADRESSE": 0,
+    "COTE": "Gauche",
+    "TYPE_F": "boulevard"
+  }
+}
+```
+
+**Key fields:**
+| Field | Description |
+|-------|-------------|
+| `COTE_RUE_ID` | **The street ID you need** |
+| `NOM_VOIE` | Street name |
+| `DEBUT_ADRESSE` | Starting address number |
+| `FIN_ADRESSE` | Ending address number |
+| `COTE` | Side of street: "Gauche" (Left) or "Droit" (Right) |
+
+#### Step 3: Enter in Home Assistant
+
+1. Select "Enter street ID manually"
+2. Enter the `COTE_RUE_ID` value
+3. Enter a display name (e.g., "Home", "123 Acadie")
+
+**Tip:** Each side of a street has a different ID. If your address is on the left side (even numbers typically), look for `"COTE": "Gauche"`. For right side (odd numbers), look for `"COTE": "Droit"`.
 
 You can add multiple streets by adding the integration multiple times.
 
@@ -60,9 +100,9 @@ For each configured street, the following entities are created:
 
 | Entity | Description |
 |--------|-------------|
-| `sensor.<street>_snow_removal_status` | Current snow removal status (scheduled, in_progress, completed, etc.) |
-| `sensor.<street>_snow_removal_planned_start` | Planned start time for snow removal |
-| `sensor.<street>_snow_removal_planned_end` | Planned end time for snow removal |
+| `sensor.<street>_snow_removal_status` | Current status (snowed, cleared, scheduled, in_progress, etc.) |
+| `sensor.<street>_planned_start` | Planned start time for snow removal |
+| `sensor.<street>_planned_end` | Planned end time for snow removal |
 
 ### Binary Sensors
 
@@ -70,6 +110,18 @@ For each configured street, the following entities are created:
 |--------|-------------|
 | `binary_sensor.<street>_snow_removal_active` | ON when snow removal is scheduled or in progress |
 | `binary_sensor.<street>_parking_restricted` | ON when parking is restricted due to snow removal |
+
+## Snow Removal Status Codes
+
+| Status | English | French | Description |
+|--------|---------|--------|-------------|
+| 0 | Snowed | Enneigé | Not yet cleared |
+| 1 | Cleared | Déneigé | Removal completed |
+| 2 | Scheduled | Planifié | Removal scheduled |
+| 3 | Rescheduled | Replanifié | Rescheduled to new date |
+| 4 | Deferred | Reporté | Deferred, date TBD |
+| 5 | In Progress | En cours | Currently clearing |
+| 10 | Clear | Dégagé | Between operations |
 
 ## Services
 
@@ -128,7 +180,7 @@ automation:
           message: "Parking will be restricted on your street. Move your car!"
 ```
 
-### Notify before snow removal starts
+### Notify when snow removal is scheduled
 
 ```yaml
 automation:
@@ -143,44 +195,36 @@ automation:
           title: "Snow Removal Scheduled"
           message: >
             Snow removal is scheduled for your street starting at
-            {{ states('sensor.my_street_snow_removal_planned_start') }}
+            {{ states('sensor.my_street_planned_start') }}
 ```
 
-### Advanced notification with timing
+### Notify when snow removal starts
 
 ```yaml
 automation:
-  - alias: "Snow Removal Advance Warning"
+  - alias: "Snow Removal Started"
     trigger:
-      - platform: time_pattern
-        minutes: "/30"
-    condition:
-      - condition: state
-        entity_id: binary_sensor.my_street_parking_restricted
-        state: "on"
+      - platform: state
+        entity_id: sensor.my_street_snow_removal_status
+        to: "in_progress"
     action:
       - service: notify.mobile_app
         data:
-          title: "Reminder: Move Your Car"
-          message: >
-            Snow removal on your street ends at
-            {{ state_attr('sensor.my_street_snow_removal_status', 'planned_end') }}
+          title: "Snow Removal In Progress"
+          message: "Snow removal has started on your street!"
 ```
 
 ## Data Sources & Credits
 
-This integration uses data from the following sources:
+### Planif-Neige Public API
+- Free public API by [@ludodefgh](https://github.com/ludodefgh/planif-neige-public-api)
+- Updates every 10 minutes
+- No API key required
 
 ### City of Montreal Open Data
-- **Planif-Neige API** - Real-time snow removal scheduling data
 - **Geobase Double** - Street segment data for address lookup
 - Data provided under the [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/)
 - [Montreal Open Data Portal](https://donnees.montreal.ca/)
-
-### OpenStreetMap / Nominatim
-- Address geocoding powered by [Nominatim](https://nominatim.org/)
-- Uses [OpenStreetMap](https://www.openstreetmap.org/) data
-- © OpenStreetMap contributors, [ODbL license](https://opendatacommons.org/licenses/odbl/)
 
 **Important:** The traffic signs in force on streets for parking during periods of snow loading always prevail over the data transmitted by this API.
 
@@ -189,19 +233,23 @@ This integration uses data from the following sources:
 ### Street not found in search
 - Try different variations of the street name (e.g., "St-Denis" vs "Saint-Denis")
 - Try without the civic number first to see all segments
-- Use the `snow_montreal.search_street` service to debug
+- Use manual entry with the Geobase file (see above)
 
 ### No data for my street
 - Snow removal data is only available during active operations
-- Check if your borough is covered (all 19 Montreal boroughs are supported since 2021)
+- Check if your borough is covered (all 19 Montreal boroughs are supported)
 - Verify the street ID is correct using the search service
+
+### First search is slow
+- The first search downloads the Geobase data (~50MB)
+- Subsequent searches use the cached data (24-hour cache)
 
 ## Links
 
+- [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)
 - [Info-Neige Montreal Application](https://montreal.ca/en/services/info-neige-montreal-application)
 - [Snow Removal Operations Map](https://montreal.ca/en/services/snow-removal-operations-map)
-- [Montreal Open Data - Snow Removal](https://donnees.montreal.ca/dataset/deneigement)
-- [Double Geobase Dataset](https://donnees.montreal.ca/dataset/geobase-double)
+- [Montreal Geobase Double Dataset](https://donnees.montreal.ca/dataset/geobase-double)
 
 ## License
 

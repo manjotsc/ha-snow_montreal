@@ -17,9 +17,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import ATTRIBUTION, CONF_STREET_ID, CONF_STREET_NAME, DOMAIN
 from .coordinator import SnowMontrealCoordinator
 
-# Special state when no API token is configured
-STATE_AWAITING_API_KEY = "awaiting_api_key"
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -71,11 +68,6 @@ class SnowMontrealSensorBase(CoordinatorEntity[SnowMontrealCoordinator], SensorE
         """Get the current street status."""
         return self.coordinator.get_street_status()
 
-    @property
-    def has_api_token(self) -> bool:
-        """Return True if API token is configured."""
-        return self.coordinator.has_api_token
-
 
 class SnowRemovalStatusSensor(SnowMontrealSensorBase):
     """Sensor for snow removal status."""
@@ -100,10 +92,6 @@ class SnowRemovalStatusSensor(SnowMontrealSensorBase):
     @property
     def native_value(self) -> str | None:
         """Return the current status."""
-        # Show special state if no API token
-        if not self.has_api_token:
-            return STATE_AWAITING_API_KEY
-
         status = self.street_status
         if status is None:
             return None
@@ -114,12 +102,7 @@ class SnowRemovalStatusSensor(SnowMontrealSensorBase):
         """Return additional state attributes."""
         attrs: dict[str, Any] = {
             "street_id": self._street_id,
-            "api_configured": self.has_api_token,
         }
-
-        if not self.has_api_token:
-            attrs["setup_hint"] = "Configure API token in integration options"
-            return attrs
 
         status = self.street_status
         if status is None:
@@ -130,6 +113,7 @@ class SnowRemovalStatusSensor(SnowMontrealSensorBase):
             "status_french": status.status_label_fr,
             "status_english": status.status_label_en,
             "is_active": status.is_active,
+            "parking_restricted": status.is_parking_restricted,
         })
 
         if status.municipality_id:
@@ -155,21 +139,19 @@ class SnowRemovalStatusSensor(SnowMontrealSensorBase):
     @property
     def icon(self) -> str:
         """Return the icon based on status."""
-        if not self.has_api_token:
-            return "mdi:key-alert"
-
         status = self.street_status
         if status is None:
             return "mdi:snowflake-alert"
 
+        # Map status codes to icons
         icons = {
-            "unknown": "mdi:help-circle",
+            "snowed": "mdi:snowflake",
+            "cleared": "mdi:check-circle",
             "scheduled": "mdi:calendar-clock",
+            "rescheduled": "mdi:calendar-refresh",
+            "deferred": "mdi:calendar-question",
             "in_progress": "mdi:snowplow",
-            "completed": "mdi:check-circle",
-            "cancelled": "mdi:cancel",
-            "pending": "mdi:clock-outline",
-            "replanned": "mdi:calendar-refresh",
+            "clear": "mdi:weather-sunny",
         }
         return icons.get(status.state, "mdi:snowflake-alert")
 
@@ -199,22 +181,12 @@ class SnowRemovalPlannedStartSensor(SnowMontrealSensorBase):
     @property
     def native_value(self) -> datetime | None:
         """Return the planned start time."""
-        if not self.has_api_token:
-            return None
-
         status = self.street_status
         if status is None:
             return None
 
         # Return replanned start if available, otherwise planned start
         return status.replanned_start or status.planned_start
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        if not self.has_api_token:
-            return {"api_configured": False}
-        return {"api_configured": True}
 
 
 class SnowRemovalPlannedEndSensor(SnowMontrealSensorBase):
@@ -242,19 +214,9 @@ class SnowRemovalPlannedEndSensor(SnowMontrealSensorBase):
     @property
     def native_value(self) -> datetime | None:
         """Return the planned end time."""
-        if not self.has_api_token:
-            return None
-
         status = self.street_status
         if status is None:
             return None
 
         # Return replanned end if available, otherwise planned end
         return status.replanned_end or status.planned_end
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        if not self.has_api_token:
-            return {"api_configured": False}
-        return {"api_configured": True}

@@ -11,7 +11,6 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.helpers import config_validation as cv
 
-from .api_config import get_api_config_store
 from .const import DOMAIN
 from .coordinator import SnowMontrealCoordinator
 from .street_lookup import get_street_lookup
@@ -102,10 +101,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Montreal Snow Removal from a config entry."""
-    # Get shared API config
-    api_config = await get_api_config_store(hass)
-
-    coordinator = SnowMontrealCoordinator(hass, entry, api_config)
+    coordinator = SnowMontrealCoordinator(hass, entry)
 
     # Fetch initial data
     await coordinator.async_config_entry_first_refresh()

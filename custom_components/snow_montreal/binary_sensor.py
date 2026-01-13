@@ -68,11 +68,6 @@ class SnowMontrealBinarySensorBase(
         """Get the current street status."""
         return self.coordinator.get_street_status()
 
-    @property
-    def has_api_token(self) -> bool:
-        """Return True if API token is configured."""
-        return self.coordinator.has_api_token
-
 
 class SnowRemovalActiveSensor(SnowMontrealBinarySensorBase):
     """Binary sensor indicating if snow removal is active or scheduled."""
@@ -97,9 +92,6 @@ class SnowRemovalActiveSensor(SnowMontrealBinarySensorBase):
     @property
     def is_on(self) -> bool | None:
         """Return True if snow removal is active or scheduled."""
-        if not self.has_api_token:
-            return None
-
         status = self.street_status
         if status is None:
             return None
@@ -108,8 +100,6 @@ class SnowRemovalActiveSensor(SnowMontrealBinarySensorBase):
     @property
     def icon(self) -> str:
         """Return the icon based on state."""
-        if not self.has_api_token:
-            return "mdi:key-alert"
         if self.is_on:
             return "mdi:snowplow"
         return "mdi:check-circle-outline"
@@ -117,21 +107,14 @@ class SnowRemovalActiveSensor(SnowMontrealBinarySensorBase):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
-        attrs: dict[str, Any] = {"api_configured": self.has_api_token}
-
-        if not self.has_api_token:
-            attrs["setup_hint"] = "Configure API token in integration options"
-            return attrs
-
         status = self.street_status
         if status is None:
-            return attrs
+            return {}
 
-        attrs.update({
+        return {
             "status": status.state,
             "status_code": status.status_code,
-        })
-        return attrs
+        }
 
 
 class SnowRemovalParkingRestrictionSensor(SnowMontrealBinarySensorBase):
@@ -159,21 +142,16 @@ class SnowRemovalParkingRestrictionSensor(SnowMontrealBinarySensorBase):
     @property
     def is_on(self) -> bool | None:
         """Return True if parking is restricted (snow removal scheduled/in progress)."""
-        if not self.has_api_token:
-            return None
-
         status = self.street_status
         if status is None:
             return None
 
-        # Parking is restricted when status is scheduled (1), in_progress (2), or replanned (6)
-        return status.status_code in (1, 2, 6)
+        # Use the is_parking_restricted property from StreetSnowStatus
+        return status.is_parking_restricted
 
     @property
     def icon(self) -> str:
         """Return the icon based on state."""
-        if not self.has_api_token:
-            return "mdi:key-alert"
         if self.is_on:
             return "mdi:car-off"
         return "mdi:car"
@@ -181,17 +159,11 @@ class SnowRemovalParkingRestrictionSensor(SnowMontrealBinarySensorBase):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
-        attrs: dict[str, Any] = {"api_configured": self.has_api_token}
-
-        if not self.has_api_token:
-            attrs["setup_hint"] = "Configure API token in integration options"
-            return attrs
-
         status = self.street_status
         if status is None:
-            return attrs
+            return {}
 
-        attrs["status"] = status.state
+        attrs = {"status": status.state}
 
         if status.planned_start:
             attrs["restriction_starts"] = status.planned_start.isoformat()
