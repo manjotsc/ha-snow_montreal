@@ -1,112 +1,141 @@
-# 🌨️ Montreal Snow Removal for Home Assistant
+# 🌨️ Montreal Snow Removal
 
-Track snow removal operations on your street using Montreal's Planif-Neige data. **No API key required.**
+**Home Assistant integration for tracking snow removal operations in Montreal**
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/badge/release-v2.0.0-blue.svg?style=flat-square)](https://github.com/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 
-> **Powered by [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)** - Free, open-source API by [@ludodefgh](https://github.com/ludodefgh)
+<br>
 
-## Features
+<p align="center">
+  <b>Powered by <a href="https://github.com/ludodefgh/planif-neige-public-api">Planif-Neige Public API</a></b><br>
+  <sub>Free & open-source API by <a href="https://github.com/ludodefgh">@ludodefgh</a> — No API key required</sub>
+</p>
 
-- Snow removal status updates (refreshes every 10 minutes)
-- Parking restriction alerts
-- Planned start/end times
-- English & French support
-- Easy address search or manual street ID entry
+<br>
 
-> **Note on data accuracy:** Update speed depends on contractors reporting to their dispatchers, who then update the city's system. There may be delays between actual operations and status changes.
+## ✨ Features
 
-## Installation
+| | |
+|---|---|
+| 📊 **Status Tracking** | Know when your street is scheduled, in progress, or cleared |
+| 🚗 **Parking Alerts** | Get notified when parking restrictions apply |
+| 🕐 **Planned Times** | See scheduled start and end times |
+| 🔍 **Easy Setup** | Search by address or enter street ID manually |
+| 🌐 **Bilingual** | Full English & French support |
 
-### HACS (Recommended)
+<br>
 
-1. Add this repo as a custom repository in HACS
-2. Search for "Montreal Snow Removal" and install
-3. Restart Home Assistant
+> ⚠️ **Data Accuracy:** Updates depend on contractors reporting to dispatchers, who then update the city's system. Expect some delay between actual operations and status changes.
 
-### Manual
+<br>
+
+## 📦 Installation
+
+<details>
+<summary><b>HACS (Recommended)</b></summary>
+
+1. Open HACS → Integrations
+2. Menu (⋮) → Custom repositories
+3. Add this repo URL → Category: Integration
+4. Search "Montreal Snow Removal" → Install
+5. Restart Home Assistant
+
+</details>
+
+<details>
+<summary><b>Manual</b></summary>
 
 Copy `custom_components/snow_montreal` to your `config/custom_components` folder and restart.
 
-## Setup
+</details>
+
+<br>
+
+## ⚙️ Setup
 
 **Settings → Devices & Services → Add Integration → Montreal Snow Removal**
 
-### Search by Address
+<br>
 
-Enter your street name and civic number to find your street automatically.
+### Option 1: Search by Address
 
-### Manual Entry
+Just enter your street name and civic number — the integration will find your street.
 
-If search doesn't work, find your street ID from the [Montreal Geobase](https://donnees.montreal.ca/dataset/geobase-double):
+### Option 2: Manual Entry
 
-1. Download `gbdouble.json`
-2. Search for your street and find the `COTE_RUE_ID`:
+Find your street ID from the [Montreal Geobase](https://donnees.montreal.ca/dataset/geobase-double):
 
 ```json
 {
-  "COTE_RUE_ID": 10200162,
+  "COTE_RUE_ID": 10200162,    ← This is your street ID
   "NOM_VOIE": "Acadie",
-  "COTE": "Gauche",
-  "DEBUT_ADRESSE": 1000,
-  "FIN_ADRESSE": 1200
+  "COTE": "Gauche"            ← Left side / Right side (Droit)
 }
 ```
 
-> **Tip:** Each side of a street has a different ID. `Gauche` = Left, `Droit` = Right.
+<br>
 
-## Entities
+## 📊 Entities Created
 
-| Entity | Description |
-|--------|-------------|
-| `sensor.*_snow_removal_status` | Status: snowed, cleared, scheduled, in_progress, clear |
-| `sensor.*_planned_start` | When snow removal begins |
-| `sensor.*_planned_end` | When snow removal ends |
-| `binary_sensor.*_snow_removal_active` | ON when scheduled or in progress |
-| `binary_sensor.*_parking_restricted` | ON when you need to move your car |
+```
+sensor.{street}_snow_removal_status    → Current status
+sensor.{street}_planned_start          → Scheduled start time
+sensor.{street}_planned_end            → Scheduled end time
+binary_sensor.{street}_snow_removal_active   → ON when active
+binary_sensor.{street}_parking_restricted    → ON when restricted
+```
 
-## Status Values
+<br>
 
-| Code | Status | Meaning |
-|:----:|--------|---------|
-| 0 | Snowed | Not yet cleared |
-| 1 | Cleared | Removal complete |
-| 2 | Scheduled | Removal planned |
-| 3 | Rescheduled | Date changed |
-| 4 | Deferred | Postponed |
-| 5 | In Progress | Currently clearing |
-| 10 | Clear | Between operations |
+## 🚦 Status Codes
 
-## Automation Example
+| Code | Status | Description |
+|:----:|:-------|:------------|
+| `0` | Snowed | Not yet cleared |
+| `1` | Cleared | Removal complete |
+| `2` | Scheduled | Removal planned |
+| `3` | Rescheduled | Date changed |
+| `4` | Deferred | Postponed |
+| `5` | In Progress | Currently clearing |
+| `10` | Clear | Between operations |
+
+<br>
+
+## 🤖 Automation Example
 
 ```yaml
 automation:
   - alias: "Snow Removal Alert"
     trigger:
-      - platform: state
-        entity_id: binary_sensor.my_street_parking_restricted
-        to: "on"
+      platform: state
+      entity_id: binary_sensor.my_street_parking_restricted
+      to: "on"
     action:
-      - service: notify.mobile_app
-        data:
-          title: "Move Your Car!"
-          message: "Snow removal scheduled for your street."
+      service: notify.mobile_app
+      data:
+        title: "🚗 Move Your Car!"
+        message: "Snow removal scheduled for your street"
 ```
 
-## Services
+<br>
+
+## 🛠️ Services
 
 | Service | Description |
-|---------|-------------|
-| `snow_montreal.search_street` | Search for streets by name |
+|:--------|:------------|
+| `snow_montreal.search_street` | Search streets by name |
 | `snow_montreal.refresh_geobase` | Re-download street database |
 
-## Credits
-
-This integration would not be possible without:
-
-- **[Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)** by [@ludodefgh](https://github.com/ludodefgh) - The free API that makes this integration work without requiring an API key
-- **[Montreal Open Data](https://donnees.montreal.ca/)** - Street data (Geobase Double)
+<br>
 
 ---
 
-**Disclaimer:** Always follow posted traffic signs. They take precedence over this data.
+<p align="center">
+  <b>Credits</b><br><br>
+  <a href="https://github.com/ludodefgh/planif-neige-public-api">Planif-Neige Public API</a> by <a href="https://github.com/ludodefgh">@ludodefgh</a><br>
+  <a href="https://donnees.montreal.ca/">Montreal Open Data</a>
+  <br><br>
+  <sub>⚠️ Always follow posted traffic signs — they take precedence over this data.</sub>
+</p>
