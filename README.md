@@ -3,17 +3,10 @@
 **Home Assistant integration for tracking snow removal operations in Montreal**
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/badge/release-v2.0.0-blue.svg?style=flat-square)](https://github.com/)
+[![GitHub Release](https://img.shields.io/badge/release-v2.0.0-blue.svg?style=flat-square)](https://github.com/manjotsc/ha-snow_montreal/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 
-<br>
-
-<p align="center">
-  <b>Powered by <a href="https://github.com/ludodefgh/planif-neige-public-api">Planif-Neige Public API</a></b><br>
-  <sub>Free & open-source API by <a href="https://github.com/ludodefgh">@ludodefgh</a> — No API key required</sub>
-</p>
-
-<br>
+> **Powered by [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api)** — Free API by [@ludodefgh](https://github.com/ludodefgh), no key required
 
 ## ✨ Features
 
@@ -25,46 +18,32 @@
 | 🔍 **Easy Setup** | Search by address or enter street ID manually |
 | 🌐 **Bilingual** | Full English & French support |
 
-<br>
-
 > ⚠️ **Data Accuracy:** Updates depend on contractors reporting to dispatchers, who then update the city's system. Expect some delay between actual operations and status changes.
-
-<br>
 
 ## 📦 Installation
 
 <details>
 <summary><b>HACS (Recommended)</b></summary>
 
-1. Open HACS → Integrations
-2. Menu (⋮) → Custom repositories
-3. Add this repo URL → Category: Integration
-4. Search "Montreal Snow Removal" → Install
-5. Restart Home Assistant
-
+1. Open HACS → Integrations → Menu (⋮) → Custom repositories
+2. Add `https://github.com/manjotsc/ha-snow_montreal` → Category: Integration
+3. Search "Montreal Snow Removal" → Install → Restart Home Assistant
 </details>
 
 <details>
 <summary><b>Manual</b></summary>
 
 Copy `custom_components/snow_montreal` to your `config/custom_components` folder and restart.
-
 </details>
-
-<br>
 
 ## ⚙️ Setup
 
 **Settings → Devices & Services → Add Integration → Montreal Snow Removal**
 
-<br>
-
 ### Option 1: Search by Address
-
-Just enter your street name and civic number — the integration will find your street.
+Enter your street name and civic number — the integration will find your street.
 
 ### Option 2: Manual Entry
-
 Find your street ID from the [Montreal Geobase](https://donnees.montreal.ca/dataset/geobase-double):
 
 ```json
@@ -75,19 +54,15 @@ Find your street ID from the [Montreal Geobase](https://donnees.montreal.ca/data
 }
 ```
 
-<br>
-
-## 📊 Entities Created
+## 📊 Entities
 
 ```
-sensor.{street}_snow_removal_status    → Current status
-sensor.{street}_planned_start          → Scheduled start time
-sensor.{street}_planned_end            → Scheduled end time
-binary_sensor.{street}_snow_removal_active   → ON when active
-binary_sensor.{street}_parking_restricted    → ON when restricted
+sensor.{street}_snow_removal_status        → Current status
+sensor.{street}_planned_start              → Scheduled start time
+sensor.{street}_planned_end                → Scheduled end time
+binary_sensor.{street}_snow_removal_active → ON when active
+binary_sensor.{street}_parking_restricted  → ON when restricted
 ```
-
-<br>
 
 ## 🚦 Status Codes
 
@@ -100,8 +75,6 @@ binary_sensor.{street}_parking_restricted    → ON when restricted
 | `4` | Deferred | Postponed |
 | `5` | In Progress | Currently clearing |
 | `10` | Clear | Between operations |
-
-<br>
 
 ## 🤖 Automation Example
 
@@ -119,8 +92,6 @@ automation:
         message: "Snow removal scheduled for your street"
 ```
 
-<br>
-
 ## 🛠️ Services
 
 | Service | Description |
@@ -128,14 +99,8 @@ automation:
 | `snow_montreal.search_street` | Search streets by name |
 | `snow_montreal.refresh_geobase` | Re-download street database |
 
-<br>
-
 ---
 
-<p align="center">
-  <b>Credits</b><br><br>
-  <a href="https://github.com/ludodefgh/planif-neige-public-api">Planif-Neige Public API</a> by <a href="https://github.com/ludodefgh">@ludodefgh</a><br>
-  <a href="https://donnees.montreal.ca/">Montreal Open Data</a>
-  <br><br>
-  <sub>⚠️ Always follow posted traffic signs — they take precedence over this data.</sub>
-</p>
+**Credits:** [Planif-Neige Public API](https://github.com/ludodefgh/planif-neige-public-api) by [@ludodefgh](https://github.com/ludodefgh) • [Montreal Open Data](https://donnees.montreal.ca/)
+
+⚠️ Always follow posted traffic signs — they take precedence over this data.
